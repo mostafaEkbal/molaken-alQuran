@@ -1,5 +1,18 @@
 import { gql } from "@apollo/client";
 
+export const GET_AYAH = gql`
+  query GetAyah($number: Int!, $soraNumber: Int!) {
+    aya(number: $number, soraNumber: $soraNumber) {
+      id
+      text
+      segments
+      number
+      transliteration
+      meaning
+    }
+  }
+`;
+
 export const GET_SURAHS = gql`
   query GetSurahs {
     sorat {
@@ -13,21 +26,8 @@ export const GET_SURAHS = gql`
 `;
 
 export const GET_AYAT = gql`
-  query GetAyat($surahId: ID!) {
-    ayat(soraId: $surahId) {
-      id
-      text
-      segments
-      number
-      transliteration
-      meaning
-    }
-  }
-`;
-
-export const GET_AYAH = gql`
-  query GetAyah($ayahId: ID!, $surahId: ID!) {
-    aya(id: $ayahId, soraId: $surahId) {
+  query GetAyat($soraId: ID!) {
+    ayat(soraId: $soraId) {
       id
       text
       segments

@@ -1,73 +1,60 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity, Modal, StyleSheet } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
 import { SafeAreaView, SafeAreaProvider } from "react-native-safe-area-context";
 import ModalMenu from "@/components/ModalMenu";
 import { gql, useQuery } from "@apollo/client";
-
-const GET_AYAH = gql`
-  query GetAyah($number: ID!, $soraNumber: ID!) {
-    aya(number: $number, soraNumber: $soraNumber) {
-      id
-      text
-      segments
-      number
-      transliteration
-      meaning
-    }
-  }
-`;
-
-const GET_SURAHS = gql`
-  query GetSurahs {
-    sorat {
-      id
-      ar
-      en
-      ayatCount
-      number
-    }
-  }
-`;
-
-const GET_AYAT = gql`
-  query GetAyat($surahId: ID!) {
-    ayat(soraId: $surahId) {
-      id
-      text
-      segments
-      number
-      transliteration
-      meaning
-    }
-  }
-`;
+import { Query, QueryAyaArgs, QueryAyatArgs } from "@/constants/GraphqlTypes";
+import { GET_AYAH, GET_AYAT, GET_SURAHS } from "@/constants/Queries";
 
 const AyahScreen = () => {
   const [modalVisible, setModalVisible] = useState(false);
-  const [surahName, setSurahName] = useState("الفاتحة");
+  const [surahNumber, setSurahNumber] = useState(1);
   const [ayahNumber, setAyahNumber] = useState(1);
-  const ayahText = "بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ";
+  const [surahName, setSurahName] = useState("الفاتحة");
+  const [surahs, setSurahs] = useState<Query["sorat"]>();
+  const [ayahs, setAyahs] = useState<Query["ayat"]>();
 
   const {
     loading: loadingAyah,
     error: errorAyah,
     data: dataAyah,
-  } = useQuery(GET_AYAH, {
-    variables: { number: 1, soraNumber: 1 },
+  } = useQuery<Query, QueryAyaArgs>(GET_AYAH, {
+    variables: { number: ayahNumber, soraNumber: surahNumber },
   });
   const {
     loading: loadingSurahs,
     error: errorSurahs,
     data: dataSurahs,
-  } = useQuery(GET_SURAHS);
+  } = useQuery<Query>(GET_SURAHS);
   const {
     loading: loadingAyat,
     error: errorAyat,
     data: dataAyat,
-  } = useQuery(GET_AYAT, {
-    variables: { surahId: 1 },
+  } = useQuery<Query, QueryAyatArgs>(GET_AYAT, {
+    variables: { soraId: `${surahNumber}` },
   });
+
+  useEffect(() => {
+    if (dataSurahs) {
+      const surah = dataSurahs.sorat.find((s) => s.number === surahNumber);
+      if (surah) {
+        setSurahName(surah.ar);
+      }
+    }
+  }, [surahNumber, ayahNumber]);
+
+  useEffect(() => {
+    if (dataSurahs) {
+      setSurahs(dataSurahs.sorat);
+    }
+  }, [dataSurahs]);
+
+  useEffect(() => {
+    if (dataAyat) {
+      setAyahs([...dataAyat.ayat].sort((a, b) => a.number - b.number));
+    }
+  }, [dataAyat]);
 
   return (
     <SafeAreaProvider>
@@ -76,22 +63,39 @@ const AyahScreen = () => {
         <View style={styles.navBar}>
           <TouchableOpacity
             onPress={() => {
-              /* Previous Surah Logic */
+              /* Next Surah Logic */
+              setSurahNumber((prev) => {
+                if (prev === 1) return surahs?.[1].number || prev;
+                if (prev === 114) return prev;
+                return prev + 1;
+              });
             }}
           >
-            <FontAwesome name="angle-double-left" size={24} color="black" />
+            <FontAwesome
+              name="angle-double-left"
+              size={24}
+              color="black"
+              disabled
+            />
           </TouchableOpacity>
           <Text style={styles.surahTitle}>{`${surahName} ${ayahNumber}`}</Text>
           <TouchableOpacity
             onPress={() => {
-              /* Next Surah Logic */
+              /* Previous Surah Logic */
+              setSurahNumber((prev) => {
+                if (prev === 1) return prev;
+                if (prev === 67) return surahs?.[0].number || prev;
+                return prev - 1;
+              });
             }}
           >
             <FontAwesome name="angle-double-right" size={24} color="black" />
           </TouchableOpacity>
         </View>
         {/* Ayah Display */}
-        <Text style={styles.ayahText}>{ayahText}</Text>
+        <Text style={styles.ayahText}>
+          {loadingAyat || errorAyat? "تحميل ..." :  ayahs?.[ayahNumber - 1]?.text}
+        </Text>
         {/* Bottom Action Buttons */}
         <View style={styles.actionButtons}>
           <TouchableOpacity
@@ -124,13 +128,18 @@ const AyahScreen = () => {
             <ModalMenu
               onClose={() => setModalVisible(false)}
               onSurahSelect={(selectedSurah) => {
-                setSurahName(selectedSurah);
+                setSurahNumber(selectedSurah);
+                setAyahNumber(1);
                 setModalVisible(false);
               }}
               onAyahSelect={(selectedAyah) => {
                 setAyahNumber(selectedAyah);
                 setModalVisible(false);
               }}
+              surahs={surahs || []}
+              ayahs={ayahs || []}
+              currentAyah={ayahNumber}
+              currentSurah={surahNumber}
             />
           </View>
         </Modal>
