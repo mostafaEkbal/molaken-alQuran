@@ -1,11 +1,28 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, TouchableOpacity, Modal, StyleSheet } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Modal,
+  StyleSheet,
+  Animated,
+  Dimensions,
+  FlatList,
+  ScrollView,
+} from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
 import { SafeAreaView, SafeAreaProvider } from "react-native-safe-area-context";
 import ModalMenu from "@/components/ModalMenu";
-import { gql, useQuery } from "@apollo/client";
-import { Query, QueryAyaArgs, QueryAyatArgs } from "@/constants/GraphqlTypes";
+import { gql, QueryRef, useQuery } from "@apollo/client";
+import {
+  AyaType,
+  Query,
+  QueryAyaArgs,
+  QueryAyatArgs,
+} from "@/constants/GraphqlTypes";
 import { GET_AYAH, GET_AYAT, GET_SURAHS } from "@/constants/Queries";
+
+const { width: windowWidth } = Dimensions.get("window");
 
 const AyahScreen = () => {
   const [modalVisible, setModalVisible] = useState(false);
@@ -13,7 +30,10 @@ const AyahScreen = () => {
   const [ayahNumber, setAyahNumber] = useState(1);
   const [surahName, setSurahName] = useState("الفاتحة");
   const [surahs, setSurahs] = useState<Query["sorat"]>();
-  const [ayahs, setAyahs] = useState<Query["ayat"]>();
+  const [ayahs, setAyahs] = useState<Query["ayat"]>([]);
+  const scrollX = new Animated.Value(0);
+
+  const scrollViewRef = useRef<ScrollView>(null);
 
   const {
     loading: loadingAyah,
@@ -56,6 +76,15 @@ const AyahScreen = () => {
     }
   }, [dataAyat]);
 
+  useEffect(() => {
+    if (scrollViewRef.current) {
+      scrollViewRef.current.scrollTo({
+        x: (ayahNumber - 1) * windowWidth - 20 * (ayahNumber - 1),
+        animated: true,
+      });
+    }
+  }, [ayahNumber]);
+
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.container}>
@@ -69,13 +98,13 @@ const AyahScreen = () => {
                 if (prev === 114) return prev;
                 return prev + 1;
               });
+              setAyahNumber(1);
             }}
           >
             <FontAwesome
               name="angle-double-left"
               size={24}
-              color="black"
-              disabled
+              color={surahNumber === 114 ? "grey" : "black"}
             />
           </TouchableOpacity>
           <Text style={styles.surahTitle}>{`${surahName} ${ayahNumber}`}</Text>
@@ -87,15 +116,74 @@ const AyahScreen = () => {
                 if (prev === 67) return surahs?.[0].number || prev;
                 return prev - 1;
               });
+              setAyahNumber(1);
             }}
           >
-            <FontAwesome name="angle-double-right" size={24} color="black" />
+            <FontAwesome
+              name="angle-double-right"
+              size={24}
+              color={surahNumber === 1 ? "grey" : "black"}
+            />
           </TouchableOpacity>
         </View>
         {/* Ayah Display */}
-        <Text style={styles.ayahText}>
-          {loadingAyat || errorAyat? "تحميل ..." :  ayahs?.[ayahNumber - 1]?.text}
-        </Text>
+        <View style={styles.ayahContainer}>
+          <Animated.ScrollView
+            ref={scrollViewRef}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onScroll={Animated.event(
+              [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+              { useNativeDriver: true }
+            )}
+            scrollEventThrottle={16}
+            style={{ transform: [{ scaleX: -1 }] }}
+            contentContainerStyle={{ width: windowWidth * ayahs.length }}
+            onMomentumScrollEnd={(event) => {
+              const { contentOffset, contentSize, layoutMeasurement } =
+                event.nativeEvent;
+              const offset = contentOffset.x;
+              let index = Math.ceil(offset / windowWidth);
+              const isNearEnd =
+                Math.abs(
+                  contentSize.width -
+                    (layoutMeasurement.width + contentOffset.x)
+                ) < 1;
+
+              if (offset > 7400 && index < ayahs.length - 1) index++;
+              if (offset > 14800 && index < ayahs.length - 1) index++;
+
+              if (index >= ayahs.length - 1 || isNearEnd) {
+                console.log("index", index, "ayahs", ayahs.length);
+                // At the end of scroll, set to last ayah
+                setAyahNumber(ayahs.length );
+              } else if (index >= 0 && index < ayahs.length) {
+                // Normal scroll position
+                setAyahNumber(ayahs[index].number);
+              }
+            }}
+          >
+            {ayahs.map((ayah, index) => (
+              <View
+                style={[
+                  styles.ayahContainer,
+                  {
+                    width: windowWidth,
+                    transform: [{ translateX: -20 * index }],
+                  },
+                ]}
+                key={ayah.number}
+              >
+                <Text
+                  style={{ ...styles.ayahText, transform: [{ scaleX: -1 }] }}
+                >
+                  {loadingAyat ? "تحميل..." : ayah.text}
+                </Text>
+              </View>
+            ))}
+          </Animated.ScrollView>
+        </View>
         {/* Bottom Action Buttons */}
         <View style={styles.actionButtons}>
           <TouchableOpacity
@@ -149,7 +237,12 @@ const AyahScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 10, backgroundColor: "#f0f4f8" },
+  container: {
+    flex: 1,
+    padding: 10,
+    backgroundColor: "#f0f4f8",
+    justifyContent: "space-between",
+  },
   navBar: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -158,20 +251,33 @@ const styles = StyleSheet.create({
   },
   surahTitle: { fontSize: 18, fontWeight: "bold" },
   ayahText: {
-    fontSize: 28,
+    fontSize: 24,
     textAlign: "center",
-    marginVertical: 40,
-    lineHeight: 50,
+    width: windowWidth - 40,
+    paddingRight: 20,
   },
   actionButtons: {
     flexDirection: "row",
     justifyContent: "space-around",
-    marginBottom: 30,
+    marginVertical: 30,
   },
   listenButton: { backgroundColor: "#e0e0e0", padding: 10, borderRadius: 50 },
   recordButton: { backgroundColor: "#ffdada", padding: 10, borderRadius: 50 },
   menuButton: { position: "absolute", right: 20, bottom: 30 },
   modalContainer: { flex: 1, backgroundColor: "#333", padding: 20 },
+  ayahContainer: {
+    flex: 1,
+    width: "100%",
+    justifyContent: "center",
+  },
+  flatList: {
+    width: windowWidth,
+  },
+  ayahItemContainer: {
+    width: windowWidth,
+    alignItems: "flex-start",
+    justifyContent: "flex-start",
+  },
 });
 
 export default AyahScreen;
