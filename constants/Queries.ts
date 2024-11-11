@@ -37,3 +37,14 @@ export const GET_AYAT = gql`
     }
   }
 `;
+
+export const EVALUATE_AYAH = gql`
+  mutation EvaluateAyah($ayahId: ID!, $audio: Upload!) {
+    evaluate(ayaId: $ayahId, audio: $audio) {
+        ratios
+        misPos
+        startIndex
+        endIndex
+    }
+  }
+`;

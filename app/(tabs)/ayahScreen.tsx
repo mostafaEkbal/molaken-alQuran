@@ -9,20 +9,38 @@ import {
   Dimensions,
   FlatList,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
 import { SafeAreaView, SafeAreaProvider } from "react-native-safe-area-context";
 import ModalMenu from "@/components/ModalMenu";
-import { gql, QueryRef, useQuery } from "@apollo/client";
+import { gql, QueryRef, useQuery, useMutation } from "@apollo/client";
 import {
   AyaType,
   Query,
   QueryAyaArgs,
   QueryAyatArgs,
+  Mutation,
+  MutationEvaluateArgs,
 } from "@/constants/GraphqlTypes";
-import { GET_AYAH, GET_AYAT, GET_SURAHS } from "@/constants/Queries";
+import {
+  EVALUATE_AYAH,
+  GET_AYAH,
+  GET_AYAT,
+  GET_SURAHS,
+} from "@/constants/Queries";
+import { Audio } from "expo-av";
 
 const { width: windowWidth } = Dimensions.get("window");
+
+const UPLOAD_RECORDING = gql`
+  mutation UploadRecording($file: Upload!, $ayahId: ID!) {
+    uploadRecording(file: $file, ayahId: $ayahId) {
+      id
+      url
+    }
+  }
+`;
 
 const AyahScreen = () => {
   const [modalVisible, setModalVisible] = useState(false);
@@ -31,6 +49,12 @@ const AyahScreen = () => {
   const [surahName, setSurahName] = useState("الفاتحة");
   const [surahs, setSurahs] = useState<Query["sorat"]>();
   const [ayahs, setAyahs] = useState<Query["ayat"]>([]);
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [permissions, setPermissions] =
+    useState<Audio.PermissionResponse | null>(null);
+  const [recordingUri, setRecordingUri] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const scrollX = new Animated.Value(0);
 
   const scrollViewRef = useRef<ScrollView>(null);
@@ -85,14 +109,91 @@ const AyahScreen = () => {
     }
   }, [ayahNumber]);
 
+  useEffect(() => {
+    (async () => {
+      await Audio.requestPermissionsAsync();
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+    })();
+  }, []);
+
+  const startRecording = async () => {
+    try {
+      const recording = new Audio.Recording();
+      await recording.prepareToRecordAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
+      await recording.startAsync();
+      setRecording(recording);
+    } catch (err) {
+      console.error("Failed to start recording", err);
+    }
+  };
+
+  const stopRecording = async () => {
+    try {
+      if (!recording) return;
+      setIsUploading(true);
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+  
+      // Get blob from uri
+      const response = await fetch(uri!);
+      const blob = await response.blob();
+  
+      const formData = new FormData();
+  
+      // Add operations with exact structure
+      formData.append(
+        'operations',
+        JSON.stringify({
+          operationName: 'Evaluate',
+          variables: {
+            audio: null,
+            ayaId: dataAyah?.aya.id
+          },
+          query: 'mutation Evaluate($audio: Upload!, $ayaId: ID!) { evaluate(audio: $audio, ayaId: $ayaId) { ratios misPos startIndex endIndex __typename } }'
+        })
+      );
+  
+      // Add map matching postman format
+      formData.append(
+        'map',
+        JSON.stringify({
+          '1': ['variables.audio']
+        })
+      );
+  
+      // Add blob with exact content type
+      const file = new Blob([blob], { type: 'audio/webm;codecs=opus' });
+      formData.append('1', file, 'blob');
+  
+      const result = await fetch('https://be.ilearnquran.org/graphql', {
+        method: 'POST',
+        body: formData
+      });
+  
+      const data = await result.json();
+      console.log('Response:', data); // Debug response
+      setRecording(null);
+      setIsUploading(false);
+      return data;
+  
+    } catch (err) {
+      console.error('Failed to stop and upload recording', err);
+      setIsUploading(false);
+      setUploadError('Failed to upload recording');
+    }
+  };
+
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.container}>
-        {/* Navigation Bar */}
         <View style={styles.navBar}>
           <TouchableOpacity
             onPress={() => {
-              /* Next Surah Logic */
               setSurahNumber((prev) => {
                 if (prev === 1) return surahs?.[1].number || prev;
                 if (prev === 114) return prev;
@@ -110,7 +211,6 @@ const AyahScreen = () => {
           <Text style={styles.surahTitle}>{`${surahName} ${ayahNumber}`}</Text>
           <TouchableOpacity
             onPress={() => {
-              /* Previous Surah Logic */
               setSurahNumber((prev) => {
                 if (prev === 1) return prev;
                 if (prev === 67) return surahs?.[0].number || prev;
@@ -126,7 +226,6 @@ const AyahScreen = () => {
             />
           </TouchableOpacity>
         </View>
-        {/* Ayah Display */}
         <View style={styles.ayahContainer}>
           <Animated.ScrollView
             ref={scrollViewRef}
@@ -155,11 +254,8 @@ const AyahScreen = () => {
               if (offset > 14800 && index < ayahs.length - 1) index++;
 
               if (index >= ayahs.length - 1 || isNearEnd) {
-                console.log("index", index, "ayahs", ayahs.length);
-                // At the end of scroll, set to last ayah
-                setAyahNumber(ayahs.length );
+                setAyahNumber(ayahs.length);
               } else if (index >= 0 && index < ayahs.length) {
-                // Normal scroll position
                 setAyahNumber(ayahs[index].number);
               }
             }}
@@ -184,33 +280,30 @@ const AyahScreen = () => {
             ))}
           </Animated.ScrollView>
         </View>
-        {/* Bottom Action Buttons */}
         <View style={styles.actionButtons}>
-          <TouchableOpacity
-            onPress={() => {
-              /* Listen Logic */
-            }}
-            style={styles.listenButton}
-          >
+          <TouchableOpacity onPress={() => {}} style={styles.listenButton}>
             <FontAwesome name="volume-up" size={30} color="black" />
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => {
-              /* Record Logic */
-            }}
-            style={styles.recordButton}
+            onPress={recording ? stopRecording : startRecording}
+            style={[styles.recordButton, isUploading && styles.uploadingButton]}
+            disabled={isUploading}
           >
-            <FontAwesome name="microphone" size={30} color="red" />
+            {isUploading ? (
+              <ActivityIndicator color="red" />
+            ) : recording ? (
+              <FontAwesome name="stop" size={30} color="red" />
+            ) : (
+              <FontAwesome name="microphone" size={30} color="red" />
+            )}
           </TouchableOpacity>
         </View>
-        {/* Modal Trigger */}
         <TouchableOpacity
           onPress={() => setModalVisible(true)}
           style={styles.menuButton}
         >
           <FontAwesome name="bars" size={30} color="black" />
         </TouchableOpacity>
-        {/* Modal */}
         <Modal visible={modalVisible} animationType="slide" transparent={true}>
           <View style={styles.modalContainer}>
             <ModalMenu
@@ -277,6 +370,9 @@ const styles = StyleSheet.create({
     width: windowWidth,
     alignItems: "flex-start",
     justifyContent: "flex-start",
+  },
+  uploadingButton: {
+    opacity: 0.7,
   },
 });
 
