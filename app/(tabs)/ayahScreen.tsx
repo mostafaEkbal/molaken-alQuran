@@ -7,40 +7,25 @@ import {
   StyleSheet,
   Animated,
   Dimensions,
-  FlatList,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
 import { SafeAreaView, SafeAreaProvider } from "react-native-safe-area-context";
 import ModalMenu from "@/components/ModalMenu";
-import { gql, QueryRef, useQuery, useMutation } from "@apollo/client";
+import { useQuery } from "@apollo/client";
 import {
-  AyaType,
   Query,
   QueryAyaArgs,
   QueryAyatArgs,
-  Mutation,
-  MutationEvaluateArgs,
+  EvaluationType,
 } from "@/constants/GraphqlTypes";
-import {
-  EVALUATE_AYAH,
-  GET_AYAH,
-  GET_AYAT,
-  GET_SURAHS,
-} from "@/constants/Queries";
+import { GET_AYAH, GET_AYAT, GET_SURAHS } from "@/constants/Queries";
 import { Audio } from "expo-av";
+import AyahWord from "@/components/AyahWord";
 
 const { width: windowWidth } = Dimensions.get("window");
-
-const UPLOAD_RECORDING = gql`
-  mutation UploadRecording($file: Upload!, $ayahId: ID!) {
-    uploadRecording(file: $file, ayahId: $ayahId) {
-      id
-      url
-    }
-  }
-`;
 
 const AyahScreen = () => {
   const [modalVisible, setModalVisible] = useState(false);
@@ -50,11 +35,13 @@ const AyahScreen = () => {
   const [surahs, setSurahs] = useState<Query["sorat"]>();
   const [ayahs, setAyahs] = useState<Query["ayat"]>([]);
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
-  const [permissions, setPermissions] =
-    useState<Audio.PermissionResponse | null>(null);
-  const [recordingUri, setRecordingUri] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [ayahEvaluation, setAyahEvaluation] = useState<EvaluationType | null>(
+    null
+  );
+  const [ayahUploadedId, setAyahUploadedId] = useState<number | null>(null);
+
   const scrollX = new Animated.Value(0);
 
   const scrollViewRef = useRef<ScrollView>(null);
@@ -138,54 +125,75 @@ const AyahScreen = () => {
       setIsUploading(true);
       await recording.stopAndUnloadAsync();
       const uri = recording.getURI();
-  
-      // Get blob from uri
-      const response = await fetch(uri!);
-      const blob = await response.blob();
-  
+
       const formData = new FormData();
-  
+
       // Add operations with exact structure
       formData.append(
-        'operations',
+        "operations",
         JSON.stringify({
-          operationName: 'Evaluate',
+          operationName: "Evaluate",
           variables: {
             audio: null,
-            ayaId: dataAyah?.aya.id
+            ayaId: dataAyah?.aya.id,
           },
-          query: 'mutation Evaluate($audio: Upload!, $ayaId: ID!) { evaluate(audio: $audio, ayaId: $ayaId) { ratios misPos startIndex endIndex __typename } }'
+          query:
+            "mutation Evaluate($audio: Upload!, $ayaId: ID!) { evaluate(audio: $audio, ayaId: $ayaId) { ratios misPos startIndex endIndex __typename } }",
         })
       );
-  
+
       // Add map matching postman format
       formData.append(
-        'map',
+        "map",
         JSON.stringify({
-          '1': ['variables.audio']
+          "1": ["variables.audio"],
         })
       );
-  
-      // Add blob with exact content type
-      const file = new Blob([blob], { type: 'audio/webm;codecs=opus' });
-      formData.append('1', file, 'blob');
-  
-      const result = await fetch('https://be.ilearnquran.org/graphql', {
-        method: 'POST',
-        body: formData
+
+      // Create RN-compatible file object
+      formData.append("1", {
+        uri: uri,
+        type: "audio/webm",
+        name: "recording.webm",
+      } as any);
+
+      const result = await fetch("https://be.ilearnquran.org/graphql", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "multipart/form-data",
+        },
+        body: formData,
       });
-  
+
       const data = await result.json();
-      console.log('Response:', data); // Debug response
       setRecording(null);
       setIsUploading(false);
-      return data;
-  
+      setAyahEvaluation(data.data.evaluate);
+      setAyahUploadedId(dataAyah?.aya.id);
     } catch (err) {
-      console.error('Failed to stop and upload recording', err);
       setIsUploading(false);
-      setUploadError('Failed to upload recording');
+      setUploadError("Failed to upload recording");
+      setRecording(null);
+      Alert.alert(
+        "Upload Error",
+        "Failed to upload recording. Please try again.",
+        [
+          {
+            text: "OK",
+            onPress: () => setUploadError(null),
+          },
+        ]
+      );
     }
+  };
+
+  const handleAyahEvaluationChange = (wordIndex: number, ayahId: number) => {
+    if (ayahId !== ayahUploadedId) return;
+    if (!ayahEvaluation) return;
+    if (ayahEvaluation.startIndex > wordIndex) return;
+    if (ayahEvaluation.endIndex - 1 < wordIndex) return;
+    return ayahEvaluation?.ratios[wordIndex];
   };
 
   return (
@@ -274,7 +282,20 @@ const AyahScreen = () => {
                 <Text
                   style={{ ...styles.ayahText, transform: [{ scaleX: -1 }] }}
                 >
-                  {loadingAyat ? "تحميل..." : ayah.text}
+                  {loadingAyat
+                    ? "تحميل..."
+                    : ayah.text
+                        .split(" ")
+                        .map((word, index) => (
+                          <AyahWord
+                            key={`${ayah.number}-${index}`}
+                            word={` ${word}`}
+                            percentage={handleAyahEvaluationChange(
+                              index,
+                              ayah.id
+                            )}
+                          />
+                        ))}
                 </Text>
               </View>
             ))}
@@ -290,7 +311,7 @@ const AyahScreen = () => {
             disabled={isUploading}
           >
             {isUploading ? (
-              <ActivityIndicator color="red" />
+              <ActivityIndicator color="red" size={30} />
             ) : recording ? (
               <FontAwesome name="stop" size={30} color="red" />
             ) : (
@@ -347,7 +368,10 @@ const styles = StyleSheet.create({
     fontSize: 24,
     textAlign: "center",
     width: windowWidth - 40,
-    paddingRight: 20,
+    marginRight: 30,
+    justifyContent: "center",
+    alignItems: "center",
+    marginVertical: "auto",
   },
   actionButtons: {
     flexDirection: "row",
@@ -362,6 +386,8 @@ const styles = StyleSheet.create({
     flex: 1,
     width: "100%",
     justifyContent: "center",
+    alignItems: "center",
+    alignContent: "center",
   },
   flatList: {
     width: windowWidth,
