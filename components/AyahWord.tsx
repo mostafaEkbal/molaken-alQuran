@@ -1,3 +1,4 @@
+import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 
 interface IAyahWordProps {
@@ -20,7 +21,7 @@ const AyahWord = ({ word, percentage }: IAyahWordProps) => {
 
   return (
     <View style={styles.ayahWord}>
-      <Text>{word}</Text>
+      <Text style={styles.ayahText}>{word}</Text>
       {percentage && (
         <View
           style={{
@@ -47,18 +48,23 @@ const styles = StyleSheet.create({
     transform: [{ scaleX: -1 }],
     padding: 3,
     flex: 1,
-    height: 42,
-    marginVertical: "auto",
+    height: 72,
+    margin: 70
+  },
+  ayahText: {
+    fontSize: 28,// Replace with your font
+    textAlign: "right",
+    color: "#000",
+    fontFamily: "Amiri",
   },
   wordPercentageContainer: {
     borderRadius: 5,
     padding: 2,
-    width: 25,
     margin: "auto",
     marginTop: 2,
   },
   wordPercentage: {
-    fontSize: 8,
+    fontSize: 12,
     textAlign: "center",
   },
 });

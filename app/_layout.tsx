@@ -1,3 +1,4 @@
+import React from "react";
 import {
   DarkTheme,
   DefaultTheme,
@@ -25,7 +26,9 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [loaded] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
+    Amiri: require("../assets/fonts/Amiri-Regular.ttf"),
   });
+
 
   useEffect(() => {
     if (loaded) {
