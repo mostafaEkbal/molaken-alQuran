@@ -41,6 +41,10 @@ const AyahScreen = () => {
     null
   );
   const [ayahUploadedId, setAyahUploadedId] = useState<number | null>(null);
+  const [ayahSoundUrl, setAyahSoundUrl] = useState<string | null>(null);
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentWordIndex, setCurrentWordIndex] = useState<number>(-1);
 
   const scrollX = new Animated.Value(0);
 
@@ -100,9 +104,10 @@ const AyahScreen = () => {
 
   useEffect(() => {
     if (!ayahEvaluation) return;
-    debugger; 
+    debugger;
     if (
-      ayahEvaluation?.ratios.length === ayahs?.[ayahNumber - 1]?.text.split(" ").length
+      ayahEvaluation?.ratios.length ===
+      ayahs?.[ayahNumber - 1]?.text.split(" ").length
     ) {
       const isPerfect = ayahEvaluation.ratios.every((ratio) => ratio >= 1);
       setAyahNumber((prev) => (isPerfect ? prev + 1 : prev));
@@ -118,6 +123,24 @@ const AyahScreen = () => {
       });
     })();
   }, []);
+
+  useEffect(() => {
+    const surahNumberForamted = String(surahNumber).padStart(3, "0");
+    const ayahNumberForamted = String(ayahNumber).padStart(3, "0");
+    setAyahSoundUrl(
+      `https://be.ilearnquran.org/media/audio/quran/Husary_64kbps_${surahNumberForamted}${ayahNumberForamted}.mp3`
+    );
+    setIsPlaying(false);
+    setSound(null);
+  }, [surahNumber, ayahNumber]);
+
+  useEffect(() => {
+    return sound
+      ? () => {
+          sound.unloadAsync();
+        }
+      : undefined;
+  }, [sound]);
 
   const startRecording = async () => {
     try {
@@ -203,6 +226,69 @@ const AyahScreen = () => {
     if (ayahEvaluation.startIndex > wordIndex) return;
     if (ayahEvaluation.endIndex - 1 < wordIndex) return;
     return ayahEvaluation?.ratios[wordIndex];
+  };
+
+  const playAyah = async () => {
+    try {
+      if (sound) {
+        const status = await sound.getStatusAsync();
+        if (status.isLoaded) {
+          if (status.isPlaying) {
+            await sound.pauseAsync();
+            setIsPlaying(false);
+          } else {
+            await sound.setPositionAsync(0);
+            await sound.playAsync();
+            setIsPlaying(true);
+          }
+        } else {
+          // Load and play if sound is not loaded
+          createAndPlaySound(ayahSoundUrl ?? "");
+        }
+      } else {
+        // Create new sound instance
+        createAndPlaySound(ayahSoundUrl ?? "");
+      }
+    } catch (error) {
+      console.error("Error playing/pausing sound:", error);
+    }
+  };
+
+  const createAndPlaySound = async (url: string) => {
+    const { sound: newSound } = await Audio.Sound.createAsync(
+      { uri: url },
+      { shouldPlay: true }
+    );
+    setSound(newSound);
+    setIsPlaying(true);
+
+    newSound.setOnPlaybackStatusUpdate((status: any) => {
+      if (status.didJustFinish) {
+        setIsPlaying(false);
+        setCurrentWordIndex(-1);
+      } else if (status.isPlaying) {
+        // Convert position from milliseconds
+        const currentPosition = status.positionMillis;
+        const wordIndex = findCurrentWordIndex(
+          currentPosition,
+          ayahs[ayahNumber - 1].segments
+        );
+        setCurrentWordIndex(wordIndex);
+      }
+    });
+
+    return newSound;
+  };
+
+  // Add helper function to find current word
+  const findCurrentWordIndex = (currentTime: number, segments: number[][]) => {
+    for (let i = 0; i < segments.length; i++) {
+      const [start, end] = segments[i];
+      if (currentTime >= start && currentTime <= end) {
+        return i;
+      }
+    }
+    return -1;
   };
 
   return (
@@ -337,6 +423,7 @@ const AyahScreen = () => {
                             index,
                             ayah.id
                           )}
+                          highlight={currentWordIndex === index}
                         />
                       ))
                   )}
@@ -346,8 +433,12 @@ const AyahScreen = () => {
           </Animated.ScrollView>
         </View>
         <View style={styles.actionButtons}>
-          <TouchableOpacity onPress={() => {}} style={styles.listenButton}>
-            <FontAwesome name="volume-up" size={30} color="black" />
+          <TouchableOpacity onPress={playAyah} style={styles.listenButton}>
+            {isPlaying ? (
+              <FontAwesome name="pause" size={30} color="black" />
+            ) : (
+              <FontAwesome name="volume-up" size={30} color="black" />
+            )}
           </TouchableOpacity>
           <TouchableOpacity
             onPress={recording ? stopRecording : startRecording}

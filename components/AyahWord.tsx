@@ -4,9 +4,10 @@ import { View, Text, StyleSheet } from "react-native";
 interface IAyahWordProps {
   word: string;
   percentage?: number;
+  highlight?: boolean;
 }
 
-const AyahWord = ({ word, percentage }: IAyahWordProps) => {
+const AyahWord = ({ word, percentage, highlight }: IAyahWordProps) => {
   const handleBakgroundColor = (percentage: number) => {
     if (percentage === 1) {
       return { color: "white", backgroundColor: "rgb(76,175,80)" };
@@ -21,7 +22,9 @@ const AyahWord = ({ word, percentage }: IAyahWordProps) => {
 
   return (
     <View style={styles.ayahWord}>
-      <Text style={styles.ayahText}>{word}</Text>
+      <Text style={{ ...styles.ayahText, color: highlight ? "red" : "" }}>
+        {word}
+      </Text>
       {percentage && (
         <View
           style={{
@@ -49,10 +52,10 @@ const styles = StyleSheet.create({
     padding: 3,
     flex: 1,
     height: 72,
-    margin: 70
+    margin: 70,
   },
   ayahText: {
-    fontSize: 28,// Replace with your font
+    fontSize: 28, // Replace with your font
     textAlign: "right",
     color: "#000",
     fontFamily: "Amiri",
