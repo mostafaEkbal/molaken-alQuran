@@ -28,18 +28,6 @@ const ModalMenu = ({
   currentSurah,
   currentAyah,
 }: ModalMenuProps) => {
-  // const surahs = [
-  //   "الفاتحة",
-  //   "الملك",
-  //   "القلم",
-  //   "الحاقة",
-  //   "المعارج",
-  //   "نوح",
-  //   "الجن",
-  //   "المزمل",
-  //   "المدثر",
-  // ];
-  // const ayahs = Array.from({ length: 7 }, (_, i) => i + 1); // Adjust length for ayah count
 
   return (
     <View style={styles.modalContent}>

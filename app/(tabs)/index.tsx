@@ -45,6 +45,9 @@ const AyahScreen = () => {
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentWordIndex, setCurrentWordIndex] = useState<number>(-1);
+  const [soundLoading, setSoundLoading] = useState(false);
+  const [soundPosition, setSoundPosition] = useState<number>(0);
+  const [isLoadingText, setIsLoadingText] = useState(true);
 
   const scrollX = new Animated.Value(0);
 
@@ -104,7 +107,7 @@ const AyahScreen = () => {
 
   useEffect(() => {
     if (!ayahEvaluation) return;
-    debugger;
+    
     if (
       ayahEvaluation?.ratios.length ===
       ayahs?.[ayahNumber - 1]?.text.split(" ").length
@@ -132,6 +135,8 @@ const AyahScreen = () => {
     );
     setIsPlaying(false);
     setSound(null);
+    setSoundLoading(false);
+    setCurrentWordIndex(-1);
   }, [surahNumber, ayahNumber]);
 
   useEffect(() => {
@@ -234,43 +239,56 @@ const AyahScreen = () => {
         const status = await sound.getStatusAsync();
         if (status.isLoaded) {
           if (status.isPlaying) {
+            // Pause and save position
+            const currentStatus = await sound.getStatusAsync();
+            if (currentStatus.isLoaded) {
+              setSoundPosition(currentStatus.positionMillis);
+            }
             await sound.pauseAsync();
             setIsPlaying(false);
           } else {
-            await sound.setPositionAsync(0);
+            // Resume from saved position if not finished
+            if (status.didJustFinish) {
+              await sound.setPositionAsync(0);
+              setSoundPosition(0);
+            } else {
+              await sound.setPositionAsync(soundPosition);
+            }
             await sound.playAsync();
             setIsPlaying(true);
           }
         } else {
-          // Load and play if sound is not loaded
-          createAndPlaySound(ayahSoundUrl ?? "");
+          await createAndPlaySound(ayahSoundUrl ?? "");
         }
       } else {
-        // Create new sound instance
-        createAndPlaySound(ayahSoundUrl ?? "");
+        await createAndPlaySound(ayahSoundUrl ?? "");
       }
     } catch (error) {
       console.error("Error playing/pausing sound:", error);
+      setIsPlaying(false);
     }
   };
 
   const createAndPlaySound = async (url: string) => {
+    setSoundLoading(true);
     const { sound: newSound } = await Audio.Sound.createAsync(
       { uri: url },
       { shouldPlay: true }
     );
+    setSoundLoading(false);
     setSound(newSound);
     setIsPlaying(true);
+    setSoundPosition(0);
 
     newSound.setOnPlaybackStatusUpdate((status: any) => {
       if (status.didJustFinish) {
         setIsPlaying(false);
         setCurrentWordIndex(-1);
+        setSoundPosition(0);
       } else if (status.isPlaying) {
-        // Convert position from milliseconds
-        const currentPosition = status.positionMillis;
+        setSoundPosition(status.positionMillis);
         const wordIndex = findCurrentWordIndex(
-          currentPosition,
+          status.positionMillis,
           ayahs[ayahNumber - 1].segments
         );
         setCurrentWordIndex(wordIndex);
@@ -280,16 +298,29 @@ const AyahScreen = () => {
     return newSound;
   };
 
-  // Add helper function to find current word
   const findCurrentWordIndex = (currentTime: number, segments: number[][]) => {
     for (let i = 0; i < segments.length; i++) {
       const [start, end] = segments[i];
-      if (currentTime >= start && currentTime <= end) {
+      if (currentTime >= start - 900 && currentTime <= end) {
         return i;
       }
     }
     return -1;
   };
+
+  useEffect(() => {
+    setIsLoadingText(true);
+    if (!loadingAyat) {
+      // Only start timer after ayat loading is complete
+      const timer = setTimeout(() => {
+        setIsLoadingText(false);
+      }, 1000); // 1 second delay after loading
+
+      return () => {
+        clearTimeout(timer);
+      };
+    }
+  }, [loadingAyat]); // Add loadingAyat
 
   return (
     <SafeAreaProvider>
@@ -410,8 +441,8 @@ const AyahScreen = () => {
                 >
                   {errorAyat ? (
                     "خطاء فى التحميل"
-                  ) : loadingAyat ? (
-                    <ActivityIndicator size={50} />
+                  ) : isLoadingText ? (
+                    <ActivityIndicator size={60} color={"black"} />
                   ) : (
                     ayah.text
                       .split(" ")
@@ -434,7 +465,9 @@ const AyahScreen = () => {
         </View>
         <View style={styles.actionButtons}>
           <TouchableOpacity onPress={playAyah} style={styles.listenButton}>
-            {isPlaying ? (
+            {soundLoading ? (
+              <ActivityIndicator color={"black"} size={30} />
+            ) : isPlaying ? (
               <FontAwesome name="pause" size={30} color="black" />
             ) : (
               <FontAwesome name="volume-up" size={30} color="black" />
@@ -510,13 +543,15 @@ const styles = StyleSheet.create({
     marginHorizontal: "auto",
   },
   actionButtons: {
+    marginHorizontal: "auto",
     flexDirection: "row",
-    justifyContent: "space-around",
+    justifyContent: "center",
     marginVertical: 30,
+    gap: 80,
   },
   listenButton: { backgroundColor: "#e0e0e0", padding: 10, borderRadius: 50 },
   recordButton: { backgroundColor: "#ffdada", padding: 10, borderRadius: 50 },
-  menuButton: { position: "absolute", right: 20, bottom: 30 },
+  menuButton: { position: "absolute", right: 20, bottom: 42 },
   modalContainer: { flex: 1, backgroundColor: "#333", padding: 20 },
   ayahContainer: {
     flex: 1,
@@ -542,7 +577,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     width: "100%",
     paddingHorizontal: 20,
-    // marginTop: 10,
   },
 });
 
