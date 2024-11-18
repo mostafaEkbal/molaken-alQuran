@@ -327,6 +327,7 @@ const AyahScreen = () => {
       <SafeAreaView style={styles.container}>
         <View style={styles.navBar}>
           <TouchableOpacity
+            style={{padding: 40}}
             onPress={() => {
               setSurahNumber((prev) => {
                 if (prev === 1) return surahs?.[1].number || prev;
@@ -344,6 +345,7 @@ const AyahScreen = () => {
           </TouchableOpacity>
           <Text style={styles.surahTitle}>{`${surahName} ${ayahNumber}`}</Text>
           <TouchableOpacity
+            style={{padding: 40}}
             onPress={() => {
               setSurahNumber((prev) => {
                 if (prev === 1) return prev;
@@ -522,8 +524,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 10,
-    backgroundColor: "#f0f4f8",
+    // backgroundColor:,
     justifyContent: "space-between",
+    color: "#795547",
+    // backgroundImage: "url(https://be.ilearnquran.org/media/images/background.jpg)",
+    // backgroundSize: "cover",
+    // make the background have opacity of 0.5 with hex code
+    backgroundColor: "#FEFBF4",
   },
   navBar: {
     flexDirection: "row",
