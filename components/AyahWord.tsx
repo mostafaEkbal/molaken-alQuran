@@ -22,7 +22,7 @@ const AyahWord = ({ word, percentage, highlight }: IAyahWordProps) => {
 
   return (
     <View style={styles.ayahWord}>
-      <Text style={{ ...styles.ayahText, color: highlight ? "red" : "" }}>
+      <Text style={{ ...styles.ayahText, color: highlight ? "red" : "#795547" }}>
         {word}
       </Text>
       {percentage && (
@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
   ayahText: {
     fontSize: 28, // Replace with your font
     textAlign: "right",
-    color: "#000",
+    color: "#795547",
     fontFamily: "Amiri",
   },
   wordPercentageContainer: {

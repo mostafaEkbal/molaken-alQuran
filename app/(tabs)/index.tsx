@@ -10,6 +10,8 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  ImageBackground,
+  TouchableNativeFeedback,
 } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
 import { SafeAreaView, SafeAreaProvider } from "react-native-safe-area-context";
@@ -24,6 +26,7 @@ import {
 import { GET_AYAH, GET_AYAT, GET_SURAHS } from "@/constants/Queries";
 import { Audio } from "expo-av";
 import AyahWord from "@/components/AyahWord";
+import MenuIcon from "@/assets/icons/menuIcon";
 
 const { width: windowWidth } = Dimensions.get("window");
 
@@ -107,7 +110,7 @@ const AyahScreen = () => {
 
   useEffect(() => {
     if (!ayahEvaluation) return;
-    
+
     if (
       ayahEvaluation?.ratios.length ===
       ayahs?.[ayahNumber - 1]?.text.split(" ").length
@@ -325,196 +328,221 @@ const AyahScreen = () => {
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.container}>
-        <View style={styles.navBar}>
-          <TouchableOpacity
-            style={{padding: 40}}
-            onPress={() => {
-              setSurahNumber((prev) => {
-                if (prev === 1) return surahs?.[1].number || prev;
-                if (prev === 114) return prev;
-                return prev + 1;
-              });
-              setAyahNumber(1);
-            }}
-          >
-            <FontAwesome
-              name="angle-double-left"
-              size={24}
-              color={surahNumber === 114 ? "grey" : "black"}
-            />
-          </TouchableOpacity>
-          <Text style={styles.surahTitle}>{`${surahName} ${ayahNumber}`}</Text>
-          <TouchableOpacity
-            style={{padding: 40}}
-            onPress={() => {
-              setSurahNumber((prev) => {
-                if (prev === 1) return prev;
-                if (prev === 67) return surahs?.[0].number || prev;
-                return prev - 1;
-              });
-              setAyahNumber(1);
-            }}
-          >
-            <FontAwesome
-              name="angle-double-right"
-              size={24}
-              color={surahNumber === 1 ? "grey" : "black"}
-            />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.ayahNavBar}>
-          <TouchableOpacity
-            onPress={() => {
-              setAyahNumber((prev) => {
-                if (prev === ayahs?.length) return prev;
-                return prev + 1;
-              });
-            }}
-          >
-            <FontAwesome
-              name="angle-left"
-              size={24}
-              color={ayahNumber === ayahs?.length ? "grey" : "black"}
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => {
-              setAyahNumber((prev) => {
-                if (prev === 1) return prev;
-                return prev - 1;
-              });
-            }}
-          >
-            <FontAwesome
-              name="angle-right"
-              size={24}
-              color={ayahNumber === 1 ? "grey" : "black"}
-            />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.ayahContainer}>
-          <Animated.ScrollView
-            ref={scrollViewRef}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onScroll={Animated.event(
-              [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-              { useNativeDriver: true }
-            )}
-            scrollEventThrottle={16}
-            style={{ transform: [{ scaleX: -1 }] }}
-            contentContainerStyle={{ width: windowWidth * ayahs.length }}
-            onMomentumScrollEnd={(event) => {
-              const { contentOffset, contentSize, layoutMeasurement } =
-                event.nativeEvent;
-              const offset = contentOffset.x;
-              let index = Math.ceil(offset / windowWidth);
-              const isNearEnd =
-                Math.abs(
-                  contentSize.width -
-                    (layoutMeasurement.width + contentOffset.x)
-                ) < 1;
-
-              if (offset > 7400 && index < ayahs.length - 1) index++;
-              if (offset > 14800 && index < ayahs.length - 1) index++;
-
-              if (index >= ayahs.length - 1 || isNearEnd) {
-                setAyahNumber(ayahs.length);
-              } else if (index >= 0 && index < ayahs.length) {
-                setAyahNumber(ayahs[index].number);
-              }
-            }}
-          >
-            {ayahs.map((ayah, index) => (
-              <View
-                style={[
-                  styles.ayahContainer,
-                  {
-                    width: windowWidth,
-                    transform: [{ translateX: -20 * index }],
-                  },
-                ]}
-                key={ayah.number}
-              >
-                <Text
-                  style={{ ...styles.ayahText, transform: [{ scaleX: -1 }] }}
-                >
-                  {errorAyat ? (
-                    "خطاء فى التحميل"
-                  ) : isLoadingText ? (
-                    <ActivityIndicator size={60} color={"black"} />
-                  ) : (
-                    ayah.text
-                      .split(" ")
-                      .map((word, index) => (
-                        <AyahWord
-                          key={`${ayah.number}-${index}`}
-                          word={` ${word}`}
-                          percentage={handleAyahEvaluationChange(
-                            index,
-                            ayah.id
-                          )}
-                          highlight={currentWordIndex === index}
-                        />
-                      ))
-                  )}
-                </Text>
-              </View>
-            ))}
-          </Animated.ScrollView>
-        </View>
-        <View style={styles.actionButtons}>
-          <TouchableOpacity onPress={playAyah} style={styles.listenButton}>
-            {soundLoading ? (
-              <ActivityIndicator color={"black"} size={30} />
-            ) : isPlaying ? (
-              <FontAwesome name="pause" size={30} color="black" />
-            ) : (
-              <FontAwesome name="volume-up" size={30} color="black" />
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={recording ? stopRecording : startRecording}
-            style={[styles.recordButton, isUploading && styles.uploadingButton]}
-            disabled={isUploading}
-          >
-            {isUploading ? (
-              <ActivityIndicator color="red" size={30} />
-            ) : recording ? (
-              <FontAwesome name="stop" size={30} color="red" />
-            ) : (
-              <FontAwesome name="microphone" size={30} color="red" />
-            )}
-          </TouchableOpacity>
-        </View>
-        <TouchableOpacity
-          onPress={() => setModalVisible(true)}
-          style={styles.menuButton}
+        <ImageBackground
+          source={require("@/assets/images/background.png")}
+          style={styles.backgroundImage}
         >
-          <FontAwesome name="bars" size={30} color="black" />
-        </TouchableOpacity>
-        <Modal visible={modalVisible} animationType="slide" transparent={true}>
-          <View style={styles.modalContainer}>
-            <ModalMenu
-              onClose={() => setModalVisible(false)}
-              onSurahSelect={(selectedSurah) => {
-                setSurahNumber(selectedSurah);
-                setAyahNumber(1);
-                setModalVisible(false);
-              }}
-              onAyahSelect={(selectedAyah) => {
-                setAyahNumber(selectedAyah);
-                setModalVisible(false);
-              }}
-              surahs={surahs || []}
-              ayahs={ayahs || []}
-              currentAyah={ayahNumber}
-              currentSurah={surahNumber}
-            />
+          <View style={styles.overlay}>
+            <View style={styles.title}>
+              <Text style={styles.titleText}>القرآن الكريم</Text>
+              <TouchableOpacity
+                onPress={() => setModalVisible(true)}
+                style={styles.menuButton}
+              >
+                <MenuIcon />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.navBar}>
+              <TouchableOpacity
+                style={styles.navBarButtonsContainer}
+                onPress={() => {
+                  setSurahNumber((prev) => {
+                    if (prev === 1) return surahs?.[1].number || prev;
+                    if (prev === 114) return prev;
+                    return prev + 1;
+                  });
+                  setAyahNumber(1);
+                }}
+              >
+                <FontAwesome
+                  name="angle-double-left"
+                  size={24}
+                  color={surahNumber === 114 ? "grey" : "#795547"}
+                />
+              </TouchableOpacity>
+              <TouchableNativeFeedback onPress={() => setModalVisible(true)}>
+                <Text
+                  style={styles.surahTitle}
+                >{`${surahName} ${ayahNumber}`}</Text>
+              </TouchableNativeFeedback>
+              <TouchableOpacity
+                style={styles.navBarButtonsContainer}
+                onPress={() => {
+                  setSurahNumber((prev) => {
+                    if (prev === 1) return prev;
+                    if (prev === 67) return surahs?.[0].number || prev;
+                    return prev - 1;
+                  });
+                  setAyahNumber(1);
+                }}
+              >
+                <FontAwesome
+                  name="angle-double-right"
+                  size={24}
+                  color={surahNumber === 1 ? "grey" : "#795547"}
+                />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.ayahContainer}>
+              <Animated.ScrollView
+                ref={scrollViewRef}
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                onScroll={Animated.event(
+                  [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+                  { useNativeDriver: true }
+                )}
+                scrollEventThrottle={16}
+                style={{ transform: [{ scaleX: -1 }] }}
+                contentContainerStyle={{ width: windowWidth * ayahs.length }}
+                onMomentumScrollEnd={(event) => {
+                  const { contentOffset, contentSize, layoutMeasurement } =
+                    event.nativeEvent;
+                  const offset = contentOffset.x;
+                  let index = Math.ceil(offset / windowWidth);
+                  const isNearEnd =
+                    Math.abs(
+                      contentSize.width -
+                        (layoutMeasurement.width + contentOffset.x)
+                    ) < 1;
+                  if (offset > 7400 && index < ayahs.length - 1) index++;
+                  if (offset > 14800 && index < ayahs.length - 1) index++;
+                  if (index >= ayahs.length - 1 || isNearEnd) {
+                    setAyahNumber(ayahs.length);
+                  } else if (index >= 0 && index < ayahs.length) {
+                    setAyahNumber(ayahs[index].number);
+                  }
+                }}
+              >
+                {ayahs.map((ayah, index) => (
+                  <View
+                    style={[
+                      styles.ayahContainer,
+                      {
+                        width: windowWidth,
+                        transform: [{ translateX: -20 * index }],
+                      },
+                    ]}
+                    key={ayah.number}
+                  >
+                    <Text
+                      style={{
+                        ...styles.ayahText,
+                        transform: [{ scaleX: -1 }],
+                      }}
+                    >
+                      {errorAyat ? (
+                        "خطاء فى التحميل"
+                      ) : isLoadingText ? (
+                        <ActivityIndicator size={60} color={"#795547"} />
+                      ) : (
+                        ayah.text
+                          .split(" ")
+                          .map((word, index) => (
+                            <AyahWord
+                              key={`${ayah.number}-${index}`}
+                              word={` ${word}`}
+                              percentage={handleAyahEvaluationChange(
+                                index,
+                                ayah.id
+                              )}
+                              highlight={currentWordIndex === index}
+                            />
+                          ))
+                      )}
+                    </Text>
+                  </View>
+                ))}
+              </Animated.ScrollView>
+              <View style={styles.ayahNavBar}>
+                <TouchableOpacity
+                  style={styles.navBarButtonsContainer}
+                  onPress={() => {
+                    setAyahNumber((prev) => {
+                      if (prev === ayahs?.length) return prev;
+                      return prev + 1;
+                    });
+                  }}
+                >
+                  <FontAwesome
+                    name="angle-left"
+                    size={24}
+                    color={ayahNumber === ayahs?.length ? "grey" : "#795547"}
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.navBarButtonsContainer}
+                  onPress={() => {
+                    setAyahNumber((prev) => {
+                      if (prev === 1) return prev;
+                      return prev - 1;
+                    });
+                  }}
+                >
+                  <FontAwesome
+                    name="angle-right"
+                    size={24}
+                    color={ayahNumber === 1 ? "grey" : "#795547"}
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.actionButtons}>
+              <TouchableOpacity onPress={playAyah} style={styles.listenButton}>
+                {soundLoading ? (
+                  <ActivityIndicator color={"#795547"} size={35} />
+                ) : isPlaying ? (
+                  <FontAwesome name="pause" size={35} color="#795547" />
+                ) : (
+                  <FontAwesome name="volume-up" size={35} color="#795547" />
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={recording ? stopRecording : startRecording}
+                style={[
+                  styles.recordButton,
+                  isUploading && styles.uploadingButton,
+                ]}
+                disabled={isUploading}
+              >
+                {isUploading ? (
+                  <ActivityIndicator color="#795547" size={35} />
+                ) : recording ? (
+                  <FontAwesome name="stop" size={35} color="#795547" />
+                ) : (
+                  <FontAwesome name="microphone" size={35} color="#795547" />
+                )}
+              </TouchableOpacity>
+            </View>
+
+            <Modal
+              visible={modalVisible}
+              animationType="fade"
+              transparent={true}
+            >
+              <View style={styles.modalContainer}>
+                <ModalMenu
+                  onClose={() => setModalVisible(false)}
+                  onSurahSelect={(selectedSurah) => {
+                    setSurahNumber(selectedSurah);
+                    setAyahNumber(1);
+                    setModalVisible(false);
+                  }}
+                  onAyahSelect={(selectedAyah) => {
+                    setAyahNumber(selectedAyah);
+                    setModalVisible(false);
+                  }}
+                  surahs={surahs || []}
+                  ayahs={ayahs || []}
+                  currentAyah={ayahNumber}
+                  currentSurah={surahNumber}
+                />
+              </View>
+            </Modal>
           </View>
-        </Modal>
+        </ImageBackground>
       </SafeAreaView>
     </SafeAreaProvider>
   );
@@ -523,23 +551,48 @@ const AyahScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 10,
-    // backgroundColor:,
     justifyContent: "space-between",
     color: "#795547",
-    // backgroundImage: "url(https://be.ilearnquran.org/media/images/background.jpg)",
-    // backgroundSize: "cover",
-    // make the background have opacity of 0.5 with hex code
+    fontFamily: "Amiri",
+    paddingHorizontal: 10,
+  },
+  backgroundImage: {
+    flex: 1,
+    opacity: 0.85,
+  },
+  overlay: {
+    flex: 1,
+  },
+  title: {
+    width: "110%",
+    marginHorizontal: "-5%",
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    paddingVertical: 20,
+    paddingHorizontal: 30,
+    gap: 20,
     backgroundColor: "#FEFBF4",
+    borderRadius: 5,
+    boxShadow: "0px 0px 10px #707070",
+  },
+  titleText: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#795547",
   },
   navBar: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    marginTop: 20,
     marginBottom: 40,
     paddingHorizontal: 20,
   },
-  surahTitle: { fontSize: 18, fontWeight: "bold" },
+  navBarButtonsContainer: {
+    padding: 40,
+  },
+  surahTitle: { fontSize: 18, fontWeight: "bold", color: "#795547" },
   ayahText: {
     fontSize: 24,
     textAlign: "center",
@@ -552,20 +605,22 @@ const styles = StyleSheet.create({
   actionButtons: {
     marginHorizontal: "auto",
     flexDirection: "row",
-    justifyContent: "center",
-    marginVertical: 30,
-    gap: 80,
+    justifyContent: "space-between",
+    marginTop: 50,
+    marginBottom: 60,
+    gap: 100,
   },
-  listenButton: { backgroundColor: "#e0e0e0", padding: 10, borderRadius: 50 },
-  recordButton: { backgroundColor: "#ffdada", padding: 10, borderRadius: 50 },
-  menuButton: { position: "absolute", right: 20, bottom: 42 },
-  modalContainer: { flex: 1, backgroundColor: "#333", padding: 20 },
+  listenButton: { backgroundColor: "#fff", padding: 15, borderRadius: 50 },
+  recordButton: { backgroundColor: "#Fff", padding: 15, borderRadius: 50 },
+  menuButton: {},
+  modalContainer: { flex: 1, backgroundColor: "#333" },
   ayahContainer: {
     flex: 1,
     width: "100%",
     justifyContent: "center",
     alignItems: "center",
     alignContent: "center",
+    marginTop: -20
   },
   flatList: {
     width: windowWidth,

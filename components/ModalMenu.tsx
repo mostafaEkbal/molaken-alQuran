@@ -32,7 +32,7 @@ const ModalMenu = ({
   return (
     <View style={styles.modalContent}>
       <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-        <FontAwesome name="times" size={24} color="red" />
+        <FontAwesome name="times" size={28} color="#795547" />
       </TouchableOpacity>
       <View style={styles.sectionsContainer}>
         <ScrollView>
@@ -46,7 +46,7 @@ const ModalMenu = ({
                   ...styles.item,
                   borderRightWidth: 2.5,
                   borderRightColor:
-                    ayah.number === currentAyah ? "white" : "transparent",
+                    ayah.number === currentAyah ? "gray" : "transparent",
                 }}
               >
                 <Text style={styles.itemText}>{ayah.number}</Text>
@@ -65,7 +65,7 @@ const ModalMenu = ({
                   ...styles.item,
                   borderRightWidth: 2.5,
                   borderRightColor:
-                    surah.number === currentSurah ? "white" : "transparent",
+                    surah.number === currentSurah ? "gray" : "transparent",
                 }}
               >
                 <Text style={styles.itemText}>{surah.ar}</Text>
@@ -79,8 +79,8 @@ const ModalMenu = ({
 };
 
 const styles = StyleSheet.create({
-  modalContent: { flex: 1, padding: 20, backgroundColor: "#111" },
-  closeButton: { alignSelf: "flex-start", marginBottom: 10 },
+  modalContent: { flex: 1, padding: 20, backgroundColor: "#FEFBF4" },
+  closeButton: { alignSelf: "flex-end", marginBottom: 10 },
   sectionsContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
   section: { marginHorizontal: 10 },
   sectionTitle: { color: "white", fontSize: 20, marginBottom: 10 },
   item: { padding: 10, borderBottomWidth: 1, borderBottomColor: "gray" },
-  itemText: { color: "white" },
+  itemText: { color: "#795547", fontSize: 15 },
 });
 
 export default ModalMenu;
