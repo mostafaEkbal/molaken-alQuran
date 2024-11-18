@@ -12,6 +12,7 @@ import {
   Alert,
   ImageBackground,
   TouchableNativeFeedback,
+  TouchableHighlight,
 } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
 import { SafeAreaView, SafeAreaProvider } from "react-native-safe-area-context";
@@ -490,7 +491,11 @@ const AyahScreen = () => {
             </View>
 
             <View style={styles.actionButtons}>
-              <TouchableOpacity onPress={playAyah} style={styles.listenButton}>
+              <TouchableOpacity
+                onPress={playAyah}
+                style={styles.listenButton}
+                disabled={soundLoading}
+              >
                 {soundLoading ? (
                   <ActivityIndicator color={"#795547"} size={35} />
                 ) : isPlaying ? (
@@ -499,8 +504,10 @@ const AyahScreen = () => {
                   <FontAwesome name="volume-up" size={35} color="#795547" />
                 )}
               </TouchableOpacity>
-              <TouchableOpacity
-                onPress={recording ? stopRecording : startRecording}
+              <TouchableHighlight
+                underlayColor="#FEFBF4"
+                onPressIn={startRecording}
+                onPressOut={stopRecording}
                 style={[
                   styles.recordButton,
                   isUploading && styles.uploadingButton,
@@ -514,7 +521,7 @@ const AyahScreen = () => {
                 ) : (
                   <FontAwesome name="microphone" size={35} color="#795547" />
                 )}
-              </TouchableOpacity>
+              </TouchableHighlight>
             </View>
 
             <Modal
@@ -620,7 +627,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     alignContent: "center",
-    marginTop: -20
+    marginTop: -20,
   },
   flatList: {
     width: windowWidth,
