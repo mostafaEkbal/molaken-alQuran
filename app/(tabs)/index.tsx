@@ -335,7 +335,7 @@ const AyahScreen = () => {
         >
           <View style={styles.overlay}>
             <View style={styles.title}>
-              <Text style={styles.titleText}>القرآن الكريم</Text>
+              <Text style={styles.titleText}>ملقن القرآن الذكى</Text>
               <TouchableOpacity
                 onPress={() => setModalVisible(true)}
                 style={styles.menuButton}
@@ -362,9 +362,7 @@ const AyahScreen = () => {
                 />
               </TouchableOpacity>
               <TouchableNativeFeedback onPress={() => setModalVisible(true)}>
-                <Text
-                  style={styles.surahTitle}
-                >{`${surahName} ${ayahNumber}`}</Text>
+                <Text style={styles.surahTitle}>{`${surahName} ${ayahNumber}`}</Text>
               </TouchableNativeFeedback>
               <TouchableOpacity
                 style={styles.navBarButtonsContainer}
@@ -565,7 +563,6 @@ const styles = StyleSheet.create({
   },
   backgroundImage: {
     flex: 1,
-    opacity: 0.85,
   },
   overlay: {
     flex: 1,
@@ -586,7 +583,7 @@ const styles = StyleSheet.create({
   titleText: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#795547",
+    color: "#604030",
   },
   navBar: {
     flexDirection: "row",
@@ -599,7 +596,7 @@ const styles = StyleSheet.create({
   navBarButtonsContainer: {
     padding: 40,
   },
-  surahTitle: { fontSize: 18, fontWeight: "bold", color: "#795547" },
+  surahTitle: { fontSize: 22, fontFamily: "Kufi",color: "#795547" },
   ayahText: {
     fontSize: 24,
     textAlign: "center",

@@ -27,6 +27,7 @@ export default function RootLayout() {
   const [loaded] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
     Amiri: require("../assets/fonts/Amiri-Regular.ttf"),
+    Kufi: require("../assets/fonts/Kufi.ttf"),
   });
 
 
