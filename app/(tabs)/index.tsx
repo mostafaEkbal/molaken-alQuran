@@ -1,3 +1,62 @@
+/**
+ * @component AyahScreen
+ * @description Main screen component for displaying and interacting with Quranic verses (Ayat).
+ *
+ * @state {boolean} modalVisible - Controls visibility of the selection modal
+ * @state {number} surahNumber - Current Surah (chapter) number being displayed
+ * @state {number} ayahNumber - Current Ayah (verse) number being displayed
+ * @state {string} surahName - Name of current Surah in Arabic
+ * @state {Query["sorat"]} surahs - List of all Surahs
+ * @state {Query["ayat"][]} ayahs - List of Ayat in current Surah
+ * @state {Audio.Recording | null} recording - Current audio recording instance
+ * @state {boolean} isUploading - Flag for audio upload status
+ * @state {string | null} uploadError - Error message during upload
+ * @state {EvaluationType | null} ayahEvaluation - Evaluation results of recorded Ayah
+ * @state {number | null} ayahUploadedId - ID of last uploaded Ayah recording
+ * @state {string | null} ayahSoundUrl - URL of Ayah audio file
+ * @state {Audio.Sound | null} sound - Audio player instance
+ * @state {boolean} isPlaying - Flag for audio playback status
+ * @state {number} currentWordIndex - Index of currently highlighted word during playback
+ * @state {boolean} soundLoading - Flag for audio loading status
+ * @state {number} soundPosition - Current position in audio playback
+ * @state {boolean} isLoadingText - Flag for text loading status
+ *
+ * @queries
+ * - GET_AYAH: Fetches single Ayah details
+ * - GET_SURAHS: Fetches list of all Surahs
+ * - GET_AYAT: Fetches all Ayat for a Surah
+ *
+ * @features
+ * - Audio playback of Quranic verses
+ * - Voice recording and evaluation
+ * - Navigation between Surahs and Ayat
+ * - Word-by-word highlighting during playback
+ * - Modal menu for quick navigation
+ * - Progress tracking for recitation
+ *
+ * @functions
+ * - startRecording(): Initiates audio recording
+ * - stopRecording(): Stops recording and uploads for evaluation
+ * - playAyah(): Handles audio playback control
+ * - handleAyahEvaluationChange(): Processes evaluation results
+ * - createAndPlaySound(): Creates and manages audio playback
+ * - findCurrentWordIndex(): Determines current word during playback
+ *
+ * @style
+ * Uses custom styling for Arabic text display and UI components
+ * Implements responsive design with window dimensions
+ * Features background image and overlay components
+ *
+ * @dependencies
+ * - React Native
+ * - Expo Audio
+ * - Apollo Client
+ * - React Native Safe Area Context
+ *
+ * @note
+ * This component is designed for Islamic Quranic learning applications
+ * Handles both Arabic text display and audio interactions
+ */
 import React, { useEffect, useRef, useState } from "react";
 import {
   View,
@@ -79,6 +138,16 @@ const AyahScreen = () => {
     fetchPolicy: "cache-and-network",
   });
 
+  /**
+   * Updates surah name based on current surah number
+   * @effect
+   * @description Finds surah by number in dataSurahs and updates surah name state
+   * @param {Object} dataSurahs - Object containing list of surahs from API
+   * @param {number} surahNumber - Current surah number to find
+   * @sideEffect Updates surahName state with Arabic name of found surah
+   * @dependencies [surahNumber, ayahNumber]
+   * @requires dataSurahs.sorat - Array of surah objects with {number, ar} properties
+   */
   useEffect(() => {
     if (dataSurahs) {
       const surah = dataSurahs.sorat.find((s) => s.number === surahNumber);
@@ -88,18 +157,41 @@ const AyahScreen = () => {
     }
   }, [surahNumber, ayahNumber]);
 
+  /**
+   * Initializes surahs list from API data
+   * @effect
+   * @description Updates surahs state when API data becomes available
+   * @param {Object} dataSurahs - Object containing list of surahs from API
+   * @sideEffect Sets surahs state with complete list from API
+   * @dependencies [dataSurahs]
+   * @requires dataSurahs.sorat - Array of surah objects
+   */
   useEffect(() => {
     if (dataSurahs) {
       setSurahs(dataSurahs.sorat);
     }
   }, [dataSurahs]);
 
+  /**
+   * Initializes and sorts ayah data when it becomes available
+   * @effect
+   * @dependency {Object} dataAyat - The ayat data from an external source
+   * @description Sorts ayat by number and updates the ayahs state when data loads
+   */
   useEffect(() => {
     if (dataAyat) {
       setAyahs([...dataAyat.ayat].sort((a, b) => a.number - b.number));
     }
   }, [dataAyat]);
 
+  /**
+   * Handles scrolling to the correct ayah when ayah number changes
+   * @effect
+   * @dependency {number} ayahNumber - The current ayah number
+   * @description Scrolls the ScrollView horizontally to show the current ayah
+   * taking into account window width and spacing between ayahs
+   * @requires scrollViewRef - Reference to the ScrollView component
+   */
   useEffect(() => {
     if (scrollViewRef.current) {
       scrollViewRef.current.scrollTo({
@@ -109,6 +201,14 @@ const AyahScreen = () => {
     }
   }, [ayahNumber]);
 
+  /**
+   * Handles automatic progression after perfect recitation
+   * @effect
+   * @dependency {Object} ayahEvaluation - The evaluation results for current ayah
+   * @description Checks if evaluation ratios match number of words in current ayah
+   * and advances to next ayah if all ratios indicate perfect recitation (>= 1)
+   * @requires ayahs - Array of ayah objects containing text
+   */
   useEffect(() => {
     if (!ayahEvaluation) return;
 
@@ -121,6 +221,15 @@ const AyahScreen = () => {
     }
   }, [ayahEvaluation, ayahs]);
 
+  /**
+   * Initializes audio permissions and settings on component mount
+   * @effect
+   * @async
+   * @description Requests microphone permissions and configures iOS audio settings
+   * @requires Audio from expo-av
+   * @sideEffect Sets up audio recording and playback mode for iOS
+   * @dependencies [] - Runs once on mount
+   */
   useEffect(() => {
     (async () => {
       await Audio.requestPermissionsAsync();
@@ -131,11 +240,20 @@ const AyahScreen = () => {
     })();
   }, []);
 
+  /**
+   * Manages audio URL and playback state updates
+   * @effect
+   * @description Updates audio source URL when surah or ayah changes
+   * @param {number} surahNumber - Current surah number
+   * @param {number} ayahNumber - Current ayah number
+   * @sideEffect Resets all audio playback states
+   * @dependencies [surahNumber, ayahNumber]
+   */
   useEffect(() => {
-    const surahNumberForamted = String(surahNumber).padStart(3, "0");
-    const ayahNumberForamted = String(ayahNumber).padStart(3, "0");
+    const surahNumberFormated = String(surahNumber).padStart(3, "0");
+    const ayahNumberFormated = String(ayahNumber).padStart(3, "0");
     setAyahSoundUrl(
-      `https://be.ilearnquran.org/media/audio/quran/Husary_64kbps_${surahNumberForamted}${ayahNumberForamted}.mp3`
+      `https://be.ilearnquran.org/media/audio/quran/Husary_64kbps_${surahNumberFormated}${ayahNumberFormated}.mp3`
     );
     setIsPlaying(false);
     setSound(null);
@@ -143,6 +261,14 @@ const AyahScreen = () => {
     setCurrentWordIndex(-1);
   }, [surahNumber, ayahNumber]);
 
+  /**
+   * Handles sound resource cleanup
+   * @effect
+   * @description Unloads audio resources when sound object changes or component unmounts
+   * @param {Audio.Sound} sound - Current sound object
+   * @cleanup Unloads audio async
+   * @dependencies [sound]
+   */
   useEffect(() => {
     return sound
       ? () => {
@@ -151,6 +277,41 @@ const AyahScreen = () => {
       : undefined;
   }, [sound]);
 
+  /**
+   * Controls loading state for Ayah text with delay.
+   * @effect
+   * @description Sets loading state to true initially, adds 1 second delay after ayat loading completes before showing text, and cleans up timer on unmount.
+   * @param {boolean} loadingAyat - Loading state of Ayat data.
+   * @sideEffect Updates isLoadingText state to control text loading indicator.
+   * @dependencies [loadingAyat]
+   */
+  useEffect(() => {
+    setIsLoadingText(true);
+    if (!loadingAyat) {
+      const timer = setTimeout(() => {
+        setIsLoadingText(false);
+      }, 1000);
+
+      return () => {
+        clearTimeout(timer);
+      };
+    }
+  }, [loadingAyat]);
+
+  /**
+   * Initiates an audio recording session with high quality settings.
+   *
+   * @async
+   * @function startRecording
+   * @throws {Error} If recording initialization or start fails
+   * @returns {Promise<void>}
+   *
+   * Uses Expo's Audio.Recording API to:
+   * 1. Create a new recording instance
+   * 2. Prepare recording with high quality preset
+   * 3. Start the recording
+   * 4. Update recording state
+   */
   const startRecording = async () => {
     try {
       const recording = new Audio.Recording();
@@ -164,6 +325,32 @@ const AyahScreen = () => {
     }
   };
 
+  /**
+   * Stops the current recording, uploads it to the server, and evaluates the recitation.
+   *
+   * @async
+   * @function stopRecording
+   *
+   * @throws {Error} When upload fails or server returns an error
+   *
+   * @description
+   * This function performs the following steps:
+   * 1. Stops and unloads the current recording
+   * 2. Creates a FormData object with the recording and GraphQL operation details
+   * 3. Uploads the audio file to the server for evaluation
+   * 4. Updates the state with evaluation results
+   *
+   * @example
+   * await stopRecording();
+   *
+   * @returns {Promise<void>}
+   *
+   * @affects {recording} - Sets to null after successful upload
+   * @affects {isUploading} - Toggles during upload process
+   * @affects {ayahEvaluation} - Updates with server response
+   * @affects {ayahUploadedId} - Updates with current ayah ID
+   * @affects {uploadError} - Sets error message on failure
+   */
   const stopRecording = async () => {
     try {
       if (!recording) return;
@@ -229,6 +416,18 @@ const AyahScreen = () => {
     }
   };
 
+  /**
+   * Handles evaluation changes for a specific word in an Ayah (Quranic verse).
+   *
+   * @param wordIndex - The index of the word being evaluated within the Ayah
+   * @param ayahId - The unique identifier of the Ayah being evaluated
+   * @returns The evaluation ratio for the specified word index if all conditions are met, otherwise undefined
+   *
+   * Conditions for returning evaluation ratio:
+   * - The ayahId must match the currently uploaded Ayah ID
+   * - AyahEvaluation must exist
+   * - The wordIndex must be within the evaluation range (between startIndex and endIndex)
+   */
   const handleAyahEvaluationChange = (wordIndex: number, ayahId: number) => {
     if (ayahId !== ayahUploadedId) return;
     if (!ayahEvaluation) return;
@@ -237,6 +436,26 @@ const AyahScreen = () => {
     return ayahEvaluation?.ratios[wordIndex];
   };
 
+  /**
+   * Controls the playback of an Ayah (Quranic verse) audio.
+   *
+   * This function handles the following audio playback scenarios:
+   * - Pausing currently playing audio and saving the position
+   * - Resuming audio from the saved position
+   * - Starting playback from beginning if audio just finished
+   * - Creating and playing new audio if none exists
+   *
+   * @throws {Error} When there's an issue with audio playback operations
+   *
+   * @requires sound - Audio.Sound object for playback control
+   * @requires ayahSoundUrl - URL string for the audio source
+   * @requires soundPosition - Stored position in milliseconds for resume functionality
+   *
+   * @affects {isPlaying} - State boolean indicating if audio is currently playing
+   * @affects {soundPosition} - State number storing current position in audio
+   *
+   * @returns {Promise<void>}
+   */
   const playAyah = async () => {
     try {
       if (sound) {
@@ -273,6 +492,23 @@ const AyahScreen = () => {
     }
   };
 
+  /**
+   * Creates and plays an audio sound from a given URL with playback status tracking.
+   *
+   * @param url - The URL of the audio file to be played
+   * @returns Promise<Audio.Sound> - Returns the newly created sound object
+   *
+   * The function:
+   * - Creates a new audio instance from the provided URL
+   * - Updates loading and playing states
+   * - Sets up playback status monitoring to:
+   *   - Track playback position
+   *   - Update current word highlighting based on timestamp
+   *   - Handle playback completion
+   * - Manages state for sound position and word index tracking
+   *
+   * @throws May throw errors related to audio loading or playback
+   */
   const createAndPlaySound = async (url: string) => {
     setSoundLoading(true);
     const { sound: newSound } = await Audio.Sound.createAsync(
@@ -302,6 +538,17 @@ const AyahScreen = () => {
     return newSound;
   };
 
+  /**
+   * Finds the index of the current word based on the given time and segments array.
+   *
+   * @param currentTime - The current time position in milliseconds
+   * @param segments - An array of number tuples representing time segments [start, end]
+   * @returns The index of the current word segment, or -1 if no matching segment is found
+   *
+   * @example
+   * const segments = [[0, 1000], [1100, 2000], [2100, 3000]];
+   * const currentIndex = findCurrentWordIndex(1500, segments); // Returns 1
+   */
   const findCurrentWordIndex = (currentTime: number, segments: number[][]) => {
     for (let i = 0; i < segments.length; i++) {
       const [start, end] = segments[i];
@@ -311,20 +558,6 @@ const AyahScreen = () => {
     }
     return -1;
   };
-
-  useEffect(() => {
-    setIsLoadingText(true);
-    if (!loadingAyat) {
-      // Only start timer after ayat loading is complete
-      const timer = setTimeout(() => {
-        setIsLoadingText(false);
-      }, 1000); // 1 second delay after loading
-
-      return () => {
-        clearTimeout(timer);
-      };
-    }
-  }, [loadingAyat]); // Add loadingAyat
 
   return (
     <SafeAreaProvider>
@@ -362,7 +595,7 @@ const AyahScreen = () => {
                 />
               </TouchableOpacity>
               <TouchableNativeFeedback onPress={() => setModalVisible(true)}>
-                <Text style={styles.surahTitle}>{`${surahName} ${ayahNumber}`}</Text>
+                <Text style={styles.surahTitle}>{`${surahName}`}</Text>
               </TouchableNativeFeedback>
               <TouchableOpacity
                 style={styles.navBarButtonsContainer}
@@ -470,6 +703,9 @@ const AyahScreen = () => {
                     color={ayahNumber === ayahs?.length ? "grey" : "#795547"}
                   />
                 </TouchableOpacity>
+                <TouchableNativeFeedback onPress={() => setModalVisible(true)}>
+                  <Text style={styles.surahTitle}>{`${ayahNumber}`}</Text>
+                </TouchableNativeFeedback>
                 <TouchableOpacity
                   style={styles.navBarButtonsContainer}
                   onPress={() => {
@@ -596,7 +832,7 @@ const styles = StyleSheet.create({
   navBarButtonsContainer: {
     padding: 40,
   },
-  surahTitle: { fontSize: 22, fontFamily: "Kufi",color: "#795547" },
+  surahTitle: { fontSize: 22, fontFamily: "Kufi", color: "#795547" },
   ayahText: {
     fontSize: 24,
     textAlign: "center",
