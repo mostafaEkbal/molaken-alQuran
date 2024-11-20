@@ -10,7 +10,6 @@
  * @state {Query["ayat"][]} ayahs - List of Ayat in current Surah
  * @state {Audio.Recording | null} recording - Current audio recording instance
  * @state {boolean} isUploading - Flag for audio upload status
- * @state {string | null} uploadError - Error message during upload
  * @state {EvaluationType | null} ayahEvaluation - Evaluation results of recorded Ayah
  * @state {number | null} ayahUploadedId - ID of last uploaded Ayah recording
  * @state {string | null} ayahSoundUrl - URL of Ayah audio file
@@ -25,6 +24,17 @@
  * - GET_AYAH: Fetches single Ayah details
  * - GET_SURAHS: Fetches list of all Surahs
  * - GET_AYAT: Fetches all Ayat for a Surah
+ *
+ * @effects
+ * - Updates surah name based on current surah number
+ * - Initializes surahs list from API data
+ * - Initializes and sorts ayah data when it becomes available
+ * - Handles scrolling to the correct ayah when ayah number changes
+ * - Handles automatic progression after perfect recitation
+ * - Initializes audio permissions and settings on component mount
+ * - Manages audio URL and playback state updates
+ * - Handles sound resource cleanup
+ * - Controls loading state for Ayah text with delay
  *
  * @features
  * - Audio playback of Quranic verses
@@ -43,9 +53,9 @@
  * - findCurrentWordIndex(): Determines current word during playback
  *
  * @style
- * Uses custom styling for Arabic text display and UI components
- * Implements responsive design with window dimensions
- * Features background image and overlay components
+ * - Uses custom styling for Arabic text display and UI components
+ * - Implements responsive design with window dimensions
+ * - Features background image and overlay components
  *
  * @dependencies
  * - React Native
@@ -54,8 +64,8 @@
  * - React Native Safe Area Context
  *
  * @note
- * This component is designed for Islamic Quranic learning applications
- * Handles both Arabic text display and audio interactions
+ * - This component is designed for Islamic Quranic Tutoring applications
+ * - Handles both Arabic text display and audio interactions
  */
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -99,7 +109,6 @@ const AyahScreen = () => {
   const [ayahs, setAyahs] = useState<Query["ayat"]>([]);
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
   const [ayahEvaluation, setAyahEvaluation] = useState<EvaluationType | null>(
     null
   );
@@ -360,7 +369,6 @@ const AyahScreen = () => {
 
       const formData = new FormData();
 
-      // Add operations with exact structure
       formData.append(
         "operations",
         JSON.stringify({
@@ -374,7 +382,6 @@ const AyahScreen = () => {
         })
       );
 
-      // Add map matching postman format
       formData.append(
         "map",
         JSON.stringify({
@@ -382,7 +389,6 @@ const AyahScreen = () => {
         })
       );
 
-      // Create RN-compatible file object
       formData.append("1", {
         uri: uri,
         type: "audio/webm",
@@ -405,12 +411,10 @@ const AyahScreen = () => {
       setAyahUploadedId(dataAyah?.aya.id);
     } catch (err) {
       setIsUploading(false);
-      setUploadError("Failed to upload recording");
       setRecording(null);
       Alert.alert("خطأ فى الإرسال", "خطأ فى إرسال الملف, حاول مرة أخرى.", [
         {
           text: "المتابعة",
-          onPress: () => setUploadError(null),
         },
       ]);
     }
@@ -723,7 +727,6 @@ const AyahScreen = () => {
                 </TouchableOpacity>
               </View>
             </View>
-
             <View style={styles.actionButtons}>
               <TouchableOpacity
                 onPress={playAyah}
@@ -757,7 +760,6 @@ const AyahScreen = () => {
                 )}
               </TouchableHighlight>
             </View>
-
             <Modal
               visible={modalVisible}
               animationType="fade"

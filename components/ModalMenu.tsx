@@ -9,6 +9,17 @@ import {
 import { FontAwesome } from "@expo/vector-icons";
 import { Query } from "@/constants/GraphqlTypes";
 
+/**
+ * Props for the ModalMenu component.
+ * @typedef {Object} ModalMenuProps
+ * @property {function} onClose - Function to close the modal.
+ * @property {function} onSurahSelect - Function to select a Surah.
+ * @property {function} onAyahSelect - Function to select an Ayah.
+ * @property {Array} surahs - List of Surahs.
+ * @property {Array} ayahs - List of Ayahs.
+ * @property {number} currentSurah - Currently selected Surah.
+ * @property {number} currentAyah - Currently selected Ayah.
+ */
 interface ModalMenuProps {
   onClose: () => void;
   onSurahSelect: (surah: number) => void;
@@ -19,6 +30,11 @@ interface ModalMenuProps {
   currentAyah: number;
 }
 
+/**
+ * ModalMenu component to display a modal with a list of Surahs and Ayahs.
+ * @param {ModalMenuProps} props - Props for the component.
+ * @returns {JSX.Element} The rendered component.
+ */
 const ModalMenu = ({
   onClose,
   onSurahSelect,
@@ -27,8 +43,7 @@ const ModalMenu = ({
   ayahs,
   currentSurah,
   currentAyah,
-}: ModalMenuProps) => {
-
+}: ModalMenuProps): JSX.Element => {
   return (
     <View style={styles.modalContent}>
       <TouchableOpacity onPress={onClose} style={styles.closeButton}>

@@ -1,14 +1,31 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 
+/**
+ * Props for the AyahWord component.
+ * @typedef {Object} IAyahWordProps
+ * @property {string} word - The word to display.
+ * @property {number} [percentage] - The percentage to display.
+ * @property {boolean} [highlight] - Whether to highlight the word.
+ */
 interface IAyahWordProps {
   word: string;
   percentage?: number;
   highlight?: boolean;
 }
 
-const AyahWord = ({ word, percentage, highlight }: IAyahWordProps) => {
-  const handleBakgroundColor = (percentage: number) => {
+/**
+ * AyahWord component to display a word with optional percentage and highlight.
+ * @param {IAyahWordProps} props - The props for the component.
+ * @returns {JSX.Element} The rendered component.
+ */
+const AyahWord = ({ word, percentage, highlight }: IAyahWordProps): JSX.Element => {
+  /**
+   * Determines the background color based on the percentage.
+   * @param {number} percentage - The percentage to determine the color.
+   * @returns {Object} The style object with color and backgroundColor.
+   */
+  const handleBakgroundColor = (percentage: number): { color: string; backgroundColor: string } => {
     if (percentage === 1) {
       return { color: "white", backgroundColor: "rgb(76,175,80)" };
     } else if (percentage > 0.9) {

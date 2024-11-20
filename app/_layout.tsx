@@ -13,7 +13,9 @@ import { ApolloClient, InMemoryCache, ApolloProvider } from "@apollo/client";
 
 import { useColorScheme } from "@/hooks/useColorScheme";
 
-
+/**
+ * Apollo Client setup for GraphQL API.
+ */
 const client = new ApolloClient({
   uri: "https://be.ilearnquran.org/graphql",
   cache: new InMemoryCache(),
@@ -22,6 +24,11 @@ const client = new ApolloClient({
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
+/**
+ * Root layout component for the application.
+ * 
+ * @returns {JSX.Element | null} The root layout component.
+ */
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [loaded] = useFonts({
@@ -29,7 +36,6 @@ export default function RootLayout() {
     Amiri: require("../assets/fonts/Amiri-Regular.ttf"),
     Kufi: require("../assets/fonts/Kufi.ttf"),
   });
-
 
   useEffect(() => {
     if (loaded) {

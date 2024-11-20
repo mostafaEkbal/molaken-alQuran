@@ -1,7 +1,6 @@
 import { Stack } from 'expo-router';
 import React from 'react';
 
-import { TabBarIcon } from '@/components/navigation/TabBarIcon';
 import { useColorScheme } from 'react-native';
 
 export default function RootLayout() {
