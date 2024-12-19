@@ -599,7 +599,9 @@ const AyahScreen = () => {
                 />
               </TouchableOpacity>
               <TouchableNativeFeedback onPress={() => setModalVisible(true)}>
-                <Text style={styles.surahTitle}>{`${surahName}`}</Text>
+                <View style={{paddingInline: 10}}>
+                  <Text style={styles.surahTitle}>{`${surahName}`}</Text>
+                </View>
               </TouchableNativeFeedback>
               <TouchableOpacity
                 style={styles.navBarButtonsContainer}
@@ -708,7 +710,9 @@ const AyahScreen = () => {
                   />
                 </TouchableOpacity>
                 <TouchableNativeFeedback onPress={() => setModalVisible(true)}>
-                  <Text style={styles.surahTitle}>{`${ayahNumber}`}</Text>
+                  <View style={{paddingInline: 10}}>
+                    <Text style={styles.surahTitle}>{`${ayahNumber}`}</Text>
+                  </View>
                 </TouchableNativeFeedback>
                 <TouchableOpacity
                   style={styles.navBarButtonsContainer}
@@ -730,7 +734,12 @@ const AyahScreen = () => {
             <View style={styles.actionButtons}>
               <TouchableOpacity
                 onPress={playAyah}
-                style={styles.listenButton}
+                style={{
+                  ...styles.listenButton,
+                  backgroundColor: !isPlaying
+                    ? "rgba(255, 255, 255, .0)"
+                    : "rgba(255, 255, 255, .6)",
+                }}
                 disabled={soundLoading}
               >
                 {soundLoading ? (
@@ -748,6 +757,7 @@ const AyahScreen = () => {
                 style={[
                   styles.recordButton,
                   isUploading && styles.uploadingButton,
+                  {backgroundColor: recording && !isUploading ? "rgba(255, 255, 255, .6)" : "rgba(255, 255, 255, .0)"},
                 ]}
                 disabled={isUploading}
               >
@@ -814,14 +824,15 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     paddingHorizontal: 30,
     gap: 20,
-    backgroundColor: "#FEFBF4",
+    backgroundColor: "rgba(254, 251, 244, .4)",
     borderRadius: 5,
-    boxShadow: "0px 0px 10px #707070",
+    // boxShadow: "0px 0px 1px #707070",
   },
   titleText: {
     fontSize: 24,
     fontWeight: "bold",
     color: "#604030",
+    marginRight: 50,
   },
   navBar: {
     flexDirection: "row",
@@ -852,8 +863,16 @@ const styles = StyleSheet.create({
     marginBottom: 60,
     gap: 100,
   },
-  listenButton: { backgroundColor: "#fff", padding: 15, borderRadius: 50 },
-  recordButton: { backgroundColor: "#Fff", padding: 15, borderRadius: 50 },
+  listenButton: {
+    backgroundColor: "rgba(255, 255, 255, .0)",
+    padding: 15,
+    borderRadius: 50,
+  },
+  recordButton: {
+    backgroundColor: "rgba(255, 255, 255, .0)",
+    padding: 15,
+    borderRadius: 50,
+  },
   menuButton: {},
   modalContainer: { flex: 1, backgroundColor: "#333" },
   ayahContainer: {
