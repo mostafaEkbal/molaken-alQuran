@@ -19,7 +19,8 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.mostafaekbal.molakenalQuran"
     },
     "web": {
       "bundler": "metro",
@@ -28,12 +29,30 @@
     },
     "plugins": [
       "expo-router",
-      "expo-font"
+      "expo-font",
+      "expo-splash-screen",
+        {
+          "backgroundColor": "#FFF",
+          "image": "./assets/images/splash.png",
+          "dark": {
+            "backgroundColor": "#fff",
+            "image": "./assets/images/splash.png"
+          },
+          "imageWidth": 200
+        }
     ],
     "experiments": {
       "typedRoutes": true
     },
     "jsEngine": "hermes",
-    "newArchEnabled": true
+    "newArchEnabled": true,
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "2e2a8bed-af23-4e26-b7ae-44bddcb4695d"
+      }
+    }
   }
 }
