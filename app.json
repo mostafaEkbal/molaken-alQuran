@@ -46,6 +46,10 @@
     },
     "jsEngine": "hermes",
     "newArchEnabled": true,
+    "locales": {
+      "defaultLocale": "en",
+      "useDeviceLocales": false
+    },
     "extra": {
       "router": {
         "origin": false

@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
+  I18nManager,
 } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
 import { Query } from "@/constants/GraphqlTypes";
@@ -62,6 +63,7 @@ const ModalMenu = ({
                   borderRightWidth: 2.5,
                   borderRightColor:
                     ayah.number === currentAyah ? "gray" : "transparent",
+                  flexDirection: I18nManager.isRTL ? "row" : "row-reverse",
                 }}
               >
                 <Text style={styles.itemText}>{ayah.number}</Text>
@@ -81,6 +83,7 @@ const ModalMenu = ({
                   borderRightWidth: 2.5,
                   borderRightColor:
                     surah.number === currentSurah ? "gray" : "transparent",
+                  flexDirection: I18nManager.isRTL ? "row" : "row-reverse",
                 }}
               >
                 <Text style={styles.itemText}>{surah.ar}</Text>
@@ -94,18 +97,44 @@ const ModalMenu = ({
 };
 
 const styles = StyleSheet.create({
-  modalContent: { flex: 1, padding: 20, backgroundColor: "#FEFBF4" },
-  closeButton: { alignSelf: "flex-end", marginBottom: 10 },
+  modalContent: { 
+    flex: 1, 
+    padding: 20, 
+    backgroundColor: "#FEFBF4" 
+  },
+  closeButton: { 
+    alignSelf: I18nManager.isRTL ? "flex-start" : "flex-end", 
+    marginBottom: 10 
+  },
   sectionsContainer: {
-    flexDirection: "row",
+    flexDirection: I18nManager.isRTL ? "row" : "row-reverse",
     justifyContent: "space-between",
     paddingVertical: 15,
     gap: 10,
   },
-  section: { marginHorizontal: 10 },
-  sectionTitle: { color: "white", fontSize: 20, marginBottom: 10 },
-  item: { padding: 10, borderBottomWidth: 1, borderBottomColor: "gray" },
-  itemText: { color: "#795547", fontSize: 15 },
+  section: { 
+    marginHorizontal: 10,
+    alignItems: I18nManager.isRTL ? "flex-start" : "flex-end",
+  },
+  sectionTitle: { 
+    color: "#795547", 
+    fontSize: 20, 
+    marginBottom: 10, 
+    fontFamily: "Kufi",
+    textAlign: I18nManager.isRTL ? "left" : "right", 
+  },
+  item: { 
+    padding: 10, 
+    borderBottomWidth: 1, 
+    borderBottomColor: "gray",
+    width: "100%", 
+  },
+  itemText: { 
+    color: "#795547", 
+    fontSize: 15,
+    fontFamily: "Amiri",
+    textAlign: I18nManager.isRTL ? "left" : "right", 
+  },
 });
 
 export default ModalMenu;
