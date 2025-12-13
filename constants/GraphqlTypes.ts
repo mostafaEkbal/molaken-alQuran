@@ -128,6 +128,7 @@ export type SoraType = {
  */
 export type EvaluationType = {
   endIndex: Scalars['Int']['output'];
+  messages: Array<Array<Scalars['String']['output']>>;
   misPos: Array<Array<Scalars['Int']['output']>>;
   ratios: Array<Scalars['Float']['output']>;
   startIndex: Scalars['Int']['output'];

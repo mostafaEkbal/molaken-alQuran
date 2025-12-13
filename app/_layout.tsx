@@ -18,7 +18,7 @@ import { useColorScheme } from "@/hooks/useColorScheme";
  * Apollo Client setup for GraphQL API.
  */
 const client = new ApolloClient({
-  uri: "https://be.ilearnquran.org/graphql",
+  uri: process.env.EXPO_PUBLIC_API_URL + "/graphql",
   cache: new InMemoryCache(),
 });
 

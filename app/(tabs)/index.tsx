@@ -262,7 +262,7 @@ const AyahScreen = () => {
     const surahNumberFormated = String(surahNumber).padStart(3, "0");
     const ayahNumberFormated = String(ayahNumber).padStart(3, "0");
     setAyahSoundUrl(
-      `https://be.ilearnquran.org/media/audio/quran/Husary_64kbps_${surahNumberFormated}${ayahNumberFormated}.mp3`
+      process.env.EXPO_PUBLIC_API_URL + `/media/audio/quran/Husary_64kbps_${surahNumberFormated}${ayahNumberFormated}.mp3`
     );
     setIsPlaying(false);
     setSound(null);
@@ -395,7 +395,7 @@ const AyahScreen = () => {
         name: "recording.webm",
       } as any);
 
-      const result = await fetch("https://be.ilearnquran.org/graphql", {
+      const result = await fetch(process.env.EXPO_PUBLIC_API_URL + "/graphql", {
         method: "POST",
         headers: {
           Accept: "application/json",

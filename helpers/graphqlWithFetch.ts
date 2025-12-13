@@ -1,5 +1,5 @@
 export const graphqlRequest = async (query: string, variables?: any) => {
-    const response = await fetch('https://be.ilearnquran.org/graphql', {
+    const response = await fetch(process.env.EXPO_PUBLIC_API_URL + "/graphql", {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

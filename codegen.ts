@@ -1,8 +1,11 @@
+import { config as loadEnv } from 'dotenv';
 import type { CodegenConfig } from "@graphql-codegen/cli";
 
-const config: CodegenConfig = {
+loadEnv({ path: '.env.local' });
+
+const codegenConfig: CodegenConfig = {
   overwrite: true,
-  schema: "https://be.ilearnquran.org/graphql",
+  schema: process.env.EXPO_PUBLIC_API_URL + "/graphql",
   documents: "./constants/Queries.ts",
   generates: {
     "./constants/GraphqlTypes.ts": {
@@ -18,4 +21,4 @@ const config: CodegenConfig = {
   },
 };
 
-export default config;
+export default codegenConfig;
